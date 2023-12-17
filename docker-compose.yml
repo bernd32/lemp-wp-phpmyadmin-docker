@@ -1,0 +1,71 @@
+ version: '3'
+
+ services:
+   web:
+     image: nginx:latest
+     container_name: ${APP_NAME:?err}-nginx
+     ports:
+       - "8082:80"
+     volumes:
+       - ./nginx:/etc/nginx/conf.d
+     depends_on:
+       - php
+       - db
+     restart: on-failure
+
+   php:
+     image: php:fpm
+     build:
+       context: ./docker
+       dockerfile: php.Dockerfile
+     container_name: ${APP_NAME:?err}-php-fpm
+     ports:
+       - 9000:9000
+     volumes:
+       - ./wordpress:/var/www/html
+     environment:
+       - PHP_EXTENSIONS=mysqli pdo pdo_mysql
+     depends_on:
+       - db
+ 
+   db:
+     image: mariadb:latest
+     container_name: ${APP_NAME:?err}-mariadb
+     volumes:
+       - db_data:/var/lib/mysql
+     environment:
+       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?err}
+       MYSQL_DATABASE: ${MARIADB_DATABASE:?err}
+       MYSQL_USER: ${MARIADB_USER:?err}
+       MYSQL_PASSWORD: ${MARIADB_PASSWORD:?err}
+     restart: always
+
+   phpmyadmin:
+     image: phpmyadmin/phpmyadmin
+     container_name: phpmyadmin-container
+     environment:
+       PMA_HOST: db
+       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?err}
+     ports:
+       - '8084:80'
+     restart: unless-stopped
+     depends_on:
+       - db
+
+   wordpress:
+     image: wordpress
+     container_name: ${APP_NAME:?err}-wordpress
+     restart: always
+     ports:
+       - 8086:80
+     environment:
+       WORDPRESS_DB_HOST: db
+       WORDPRESS_DB_USER: ${MARIADB_USER:?err}
+       WORDPRESS_DB_PASSWORD: ${MARIADB_PASSWORD:?err}
+       WORDPRESS_DB_NAME: ${MARIADB_DATABASE:?err}
+     volumes:
+       - ./wordpress:/var/www/html
+
+ volumes:
+   db_data:
+   wordpress:
